@@ -1,0 +1,24 @@
+{
+  "name": "consent-manager-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/bot.ts",
+    "build": "tsc",
+    "start": "node dist/bot.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0",
+  "dependencies": {
+    "grammy": "1.42.0"
+  },
+  "devDependencies": {
+    "@types/node": "25.5.2",
+    "tsx": "4.21.0",
+    "typescript": "6.0.2"
+  }
+}
