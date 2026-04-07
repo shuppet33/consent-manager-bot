@@ -1,6 +1,8 @@
 import {Context as GrammyContext} from "grammy";
-import {Role} from "./user.types";
+import {Role} from "../features/user/user.types";
 
 export type Context = GrammyContext & {
-    role: Role;
+    state: {
+        role: Role
+    };
 };
