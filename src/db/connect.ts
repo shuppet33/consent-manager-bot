@@ -1,7 +1,4 @@
-import {Pool} from 'pg';
-import dotenv from 'dotenv';
-dotenv.config({ path: `../../.env` });
-
+import { Pool } from 'pg';
 
 export const db = new Pool({
     host: process.env.PGHOST,
@@ -10,5 +7,3 @@ export const db = new Pool({
     database: process.env.PGDATABASE,
     port: process.env.PGPORT,
 })
-
-console.log(await db.query('select now()'))

@@ -1,7 +1,7 @@
 import {Bot} from "grammy";
 import dotenv from 'dotenv';
-import {counterAtom, store} from "./store";
-
+import {getRole} from "./controllers/user";
+import {handleBotError} from "./errors/bot-errors";
 
 dotenv.config();
 
@@ -9,11 +9,12 @@ const bot = new Bot(process.env.TOKEN);
 
 bot.command("start", async (ctx) => {
 
-    const count = store.get(counterAtom);
+    const userId = ctx.update.message?.from.id
+    const role = await getRole(userId)
 
-    store.set(counterAtom, count + 1);
-
-    return ctx.reply(`${count}`);
+    return ctx.reply(`${role}`);
 });
+
+bot.catch(handleBotError);
 
 bot.start();
