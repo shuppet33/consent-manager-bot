@@ -1,14 +1,31 @@
 import {db} from "../db/connect";
-import {store, userRoleAtom} from "../store";
+import {NextFunction} from "grammy"
+import {Context} from "../entities/context.types";
 
+export const getRole = async (ctx: Context, next: NextFunction) => {
+    const telegramId = ctx.from?.id;
+    const firstName = ctx.from?.first_name;
+    const username = ctx.from?.username;
 
-export const getRole = async (userId: number | undefined) => {
-    if (!userId) return;
+    if (!telegramId) return;
 
-    const response = await db.query('SELECT * FROM users WHERE telegram_id = $1', [userId]);
-    const role = response.rows[0].role
+    const result = await db.query('SELECT * FROM users WHERE telegram_id = $1', [telegramId]);
 
-    store.set(userRoleAtom, role)
+    if (!result.rows.length) {
+        await db.query(
+            `
+                INSERT INTO users (telegram_id, first_name, username, role)
+                VALUES ($1, $2, $3, 'user') ON CONFLICT (telegram_id) DO NOTHING
+            `,
+            [telegramId, firstName, username]
+        );
 
-    return role
+        ctx.role = 'user';
+
+        return next()
+    }
+
+    ctx.role = result.rows[0]?.role;
+
+    return next()
 }
