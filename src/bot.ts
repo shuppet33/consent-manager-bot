@@ -1,9 +1,19 @@
-import { Bot } from "grammy";
+import {Bot} from "grammy";
+import dotenv from 'dotenv';
+import {counterAtom, store} from "./store";
 
-const bot = new Bot("8791410328:AAH7ysPw0JYgGeV-DQOY3i8RECixMM4peG8");
 
-bot.command("start", (ctx) => ctx.reply("Welcome! Up and running."));
+dotenv.config();
 
-bot.on("message", (ctx) => ctx.reply("Got another message!"));
+const bot = new Bot(process.env.TOKEN);
+
+bot.command("start", async (ctx) => {
+
+    const count = store.get(counterAtom);
+
+    store.set(counterAtom, count + 1);
+
+    return ctx.reply(`${count}`);
+});
 
 bot.start();
