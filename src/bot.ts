@@ -1,4 +1,5 @@
 import {Bot} from "grammy";
+import {Conversation, conversations, createConversation} from "@grammyjs/conversations";
 import dotenv from 'dotenv';
 import {getRole} from "./middleware/get-role";
 import {handleBotError} from "./shared/errors/bot-errors";
@@ -10,14 +11,30 @@ dotenv.config();
 
 const bot = new Bot<Context>(process.env.TOKEN);
 
+
+bot.use(conversations())
+
 bot.use(getRole)
+bot.use(createConversation(addManager));
+
+async function addManager(conversation: Conversation, ctx: Context){
+    await ctx.reply("Пришлите айди менеджера ")
+
+    const { message: idMsg } = await conversation.waitFor("message:text");
+
+    await ctx.reply("Как зовут менеджера?")
+
+    const { message: nameMsg } = await conversation.waitFor("message:text");
+
+    await ctx.reply(`ЗАЕБИСЬ. вот твои данные - ${idMsg.text}, ${nameMsg.text}`);
+}
 
 
-bot.callbackQuery("addPost", async (ctx) => {
-    ctx.reply("qweqw", {
-        reply_markup: settingsPostKeyboard(),
-    })
-});
+// bot.callbackQuery("addPost", async (ctx) => {
+//     ctx.reply("qweqw", {
+//         reply_markup: settingsPostKeyboard(),
+//     })
+// });
 
 bot.callbackQuery("getAccessList", async (ctx) => {
     ctx.reply("менеджеры", {
@@ -35,7 +52,7 @@ bot.command("start", async (ctx) => {
     }
 
     if (ctx.state.role === "manager") {
-        return ctx.reply("")
+        return ctx.reply("manager select ")
     }
 
 
@@ -49,9 +66,13 @@ bot.command("start", async (ctx) => {
 });
 
 
+
 bot.hears(/Добавить менеджера/, async (ctx) => {
-    return ctx.reply("кнопка сработала")
+    await ctx.conversation.enter("addManager");
 })
+
+
+
 
 bot.on("message", async (ctx) => {
     return ctx.reply(`message ${ctx.state.role}`)
