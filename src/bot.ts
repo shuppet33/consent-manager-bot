@@ -7,6 +7,10 @@ import {Context} from "./shared/context.types";
 import {adminKeyboard, settingsManager, settingsPostKeyboard} from "./keyboards/keyboards-admin";
 import {consents} from "./keyboards/keyboards-user";
 
+import {adminCallbackQuery} from "./callbacks/add-manager";
+import {addManager} from "./essence/manager"
+
+
 dotenv.config();
 
 const bot = new Bot<Context>(process.env.TOKEN);
@@ -15,32 +19,9 @@ const bot = new Bot<Context>(process.env.TOKEN);
 bot.use(conversations())
 
 bot.use(getRole)
+
 bot.use(createConversation(addManager));
-
-async function addManager(conversation: Conversation, ctx: Context){
-    await ctx.reply("Пришлите айди менеджера ")
-
-    const { message: idMsg } = await conversation.waitFor("message:text");
-
-    await ctx.reply("Как зовут менеджера?")
-
-    const { message: nameMsg } = await conversation.waitFor("message:text");
-
-    await ctx.reply(`ЗАЕБИСЬ. вот твои данные - ${idMsg.text}, ${nameMsg.text}`);
-}
-
-
-// bot.callbackQuery("addPost", async (ctx) => {
-//     ctx.reply("qweqw", {
-//         reply_markup: settingsPostKeyboard(),
-//     })
-// });
-
-bot.callbackQuery("getAccessList", async (ctx) => {
-    ctx.reply("менеджеры", {
-        reply_markup: settingsManager(),
-    })
-})
+adminCallbackQuery(bot)
 
 
 bot.command("start", async (ctx) => {
@@ -65,11 +46,6 @@ bot.command("start", async (ctx) => {
 
 });
 
-
-
-bot.hears(/Добавить менеджера/, async (ctx) => {
-    await ctx.conversation.enter("addManager");
-})
 
 
 
