@@ -1,16 +1,44 @@
 import {Bot} from "grammy";
 import {settingsManager} from "../keyboards/keyboards-admin";
-import {addManager} from "../essence/manager";
+import {db} from "../db/connect";
+import {Context} from "../shared/context.types";
 
-export const adminCallbackQuery = (bot: Bot) => {
+export const adminCallbackQuery = (bot: Bot<Context>) => {
     bot.callbackQuery("getAccessList", async (ctx) => {
-        ctx.reply("Панель работы менеджеров",{
-            reply_markup: settingsManager()
-        })
-    })
+        const res = await db.query(
+            `SELECT telegram_id, first_name
+             FROM users
+             WHERE role = 'manager'`
+        );
 
-    bot.hears(/Добавить менеджера/, async (ctx) => {
-        await ctx.conversation.enter("addManager")
+        if (res.rows.length === 0) {
+            return ctx.reply("Менеджеров пока нет", {
+                reply_markup: settingsManager()
+            });
+        }
+
+        const managersList = res.rows
+            .map((user, i) => {
+                return `🔹 ${i + 1}. ${user.first_name}
+   └ id: ${user.telegram_id}`;
+            })
+            .join("\n\n");
+
+        await ctx.reply(
+            `📋 <b>Панель менеджеров</b>\n\n${managersList}`,
+            {
+                parse_mode: "HTML",
+                reply_markup: settingsManager()
+            }
+        );
+    });
+
+    bot.callbackQuery("addManager", async (ctx) => {
+        await ctx.answerCallbackQuery();
+        await ctx.conversation.enter("addManager");
     })
+    // bot.hears(/Добавить/, async (ctx) => {
+    //     await ctx.conversation.enter("addManager")
+    // })
 
 }

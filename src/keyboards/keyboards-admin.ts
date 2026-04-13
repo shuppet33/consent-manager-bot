@@ -14,9 +14,11 @@ export function settingsPostKeyboard() {
 }
 
 export function settingsManager() {
-    return new Keyboard()
-        .text("Добавить менеджера")
-        .text("Список менеджеров")
-        .text("Удалить менеджера")
+    return new InlineKeyboard()
+        .text("Добавить","addManager")
+        .text("Удалить","deleteManager")
+        .text("Админ панель","admin-panel")
+
 }
+
 
