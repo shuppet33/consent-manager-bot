@@ -1,16 +1,16 @@
-import {Bot, Context} from "grammy";
-import {Conversation, conversations, createConversation} from "@grammyjs/conversations";
+import {Bot} from "grammy";
+import {conversations, createConversation} from "@grammyjs/conversations";
 import dotenv from 'dotenv';
 import {getRole} from "./middleware/get-role";
 import {handleBotError} from "./shared/errors/bot-errors";
 import {Context} from "./shared/context.types";
-import {adminKeyboard, settingsManager, settingsPostKeyboard} from "./keyboards/keyboards-admin";
+import {adminKeyboard} from "./keyboards/keyboards-admin";
 import {consents} from "./keyboards/keyboards-user";
 
 import {adminCallbackQuery} from "./callbacks/add-manager";
-import {addManager, qweqweqwe, registerManagerHandlers} from "./essence/manager"
-import {addPost} from "./callbacks/add-post";
-import {addPostConversation} from "./callbacks/add-post";
+import {registerManagerHandlers} from "./features/manager/manager.handlers"
+import {addManager} from "./features/manager/manager.service"
+import {addPost, addPostConversation} from "./callbacks/add-post";
 
 dotenv.config();
 
@@ -28,11 +28,7 @@ adminCallbackQuery(bot)
 addPost(bot)
 registerManagerHandlers(bot);
 
-bot.command("start", async (ctx) => {
-
-    const param = ctx
-
-    console.log('alenka ddd', ctx)
+bot.command("start", async (ctx: Context) => {
 
     if (ctx.state.role === "user") {
         return ctx.reply(`Для следующего шага, нужно принять политику конфиденциальности и согласие на обработку персональных данных 👇`, {
@@ -41,7 +37,7 @@ bot.command("start", async (ctx) => {
     }
 
     if (ctx.state.role === "manager") {
-        return ctx.reply("manager select ")
+        return ctx.reply("manager select")
     }
 
 
@@ -53,13 +49,7 @@ bot.command("start", async (ctx) => {
 
 });
 
-bot.command("start", async (ctx) => {
-    ctx.reply("qweqwe")
-})
-
-
-
-bot.on("message", async (ctx) => {
+bot.on("message", async (ctx: Context) => {
     return ctx.reply(`message ${ctx.state.role}`)
 })
 

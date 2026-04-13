@@ -18,7 +18,6 @@ export function settingsManager() {
         .text("Добавить","addManager")
         .text("Удалить","deleteManager")
         .text("Админ панель","admin-panel")
-
 }
 
 
