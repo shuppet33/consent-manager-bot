@@ -9,7 +9,7 @@ import {consents} from "./keyboards/keyboards-user";
 
 import {adminCallbackQuery} from "./callbacks/add-manager";
 import {registerManagerHandlers} from "./features/manager/manager.handlers"
-import {addManager} from "./features/manager/manager.service"
+import {addManager, deleteManager} from "./features/manager/manager.service"
 import {addPost, addPostConversation} from "./callbacks/add-post";
 
 dotenv.config();
@@ -23,6 +23,8 @@ bot.use(getRole)
 
 bot.use(createConversation(addManager));
 bot.use(createConversation(addPostConversation));
+bot.use(createConversation(deleteManager));
+
 
 adminCallbackQuery(bot)
 addPost(bot)
@@ -30,8 +32,10 @@ registerManagerHandlers(bot);
 
 bot.command("start", async (ctx: Context) => {
 
+    const param = ctx.match
+    console.log(param)
     if (ctx.state.role === "user") {
-        return ctx.reply(`Для следующего шага, нужно принять политику конфиденциальности и согласие на обработку персональных данных 👇`, {
+        return ctx.reply(`${param} \n Для следующего шага, нужно принять политику конфиденциальности и согласие на обработку персональных данных 👇`, {
             reply_markup: consents
         })
     }
@@ -42,7 +46,7 @@ bot.command("start", async (ctx: Context) => {
 
 
     if (ctx.state.role === "admin") {
-        return ctx.reply("Админ-панель", {
+        return ctx.reply(`Админ-панель`, {
             reply_markup: adminKeyboard()
         })
     }

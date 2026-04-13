@@ -16,7 +16,7 @@ export function settingsPostKeyboard() {
 export function settingsManager() {
     return new InlineKeyboard()
         .text("Добавить","addManager")
-        .text("Удалить","deleteManager")
+        .text("Удалить","manager-delete")
         .text("Админ панель","admin-panel")
 }
 

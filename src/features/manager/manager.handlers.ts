@@ -1,5 +1,6 @@
 import {Bot} from "grammy";
 import {adminKeyboard} from "../../keyboards/keyboards-admin";
+import {callbackify} from "node:util";
 
 export function registerManagerHandlers(bot: Bot) {
     bot.callbackQuery("admin-panel", async (ctx) => {
@@ -14,4 +15,5 @@ export function registerManagerHandlers(bot: Bot) {
         await ctx.answerCallbackQuery();
         await ctx.conversation.enter("deleteManager");
     });
+
 }

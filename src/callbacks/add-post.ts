@@ -12,9 +12,9 @@ const controlKeyboard = new InlineKeyboard()
     .text("Отправить", "submit")
     .text("Отмена", "cancel");
 
-const yesOrNoKeyboard = new Keyboard()
-    .text("Да")
-    .text("Нет")
+const yesOrNoKeyboard = new InlineKeyboard()
+    .text("Да", "yes")
+    .text("Нет", "no");
 
 const canselKeyboard = new InlineKeyboard()
     .text("Отмена","cancel")
@@ -67,9 +67,6 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
 
     const path = nanoid();
 
-    // ctx.reply("Введите текст поста",{
-    //     reply_markup:canselKeyboard
-    // });
 
     await ctx.reply("Отправьте фото и текст (можно вместе)", {
         reply_markup: canselKeyboard,
@@ -77,12 +74,10 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
 
     const msg = await conversation.waitFor("message");
 
-// 📦 что пришло
     const hasPhoto = !!msg.message?.photo;
     const hasText = !!msg.message?.text;
     const hasCaption = !!msg.message?.caption;
 
-// 👉 если есть фото
     if (hasPhoto) {
         post.photoFileId = msg.message.photo.at(-1)?.file_id;
 
@@ -141,81 +136,85 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
     // }
 
 
-
-    await ctx.reply("Добавить кнопку? (да/нет)", {
+    await ctx.reply("Добавить кнопку?", {
         reply_markup: yesOrNoKeyboard,
     });
 
-    const { message: btnAnswer } = await conversation.waitFor("message:text");
+    const callback = await conversation.waitFor("callback_query:data");
 
-    if (btnAnswer.text.toLowerCase() === "да") {
+    if (callback.callbackQuery.data === "yes") {
+        await callback.answerCallbackQuery();
+
         await ctx.reply("Введите текст кнопки");
-        const { message: btnText } = await conversation.waitFor("message:text");
+
+        const {message: btnText} = await conversation.waitFor("message:text");
 
         post.button = {
             text: btnText.text,
             url: `t.me/qliwkjelkhewf_bot?start=${path}`,
         };
-    } else {
+
+    } else if (callback.callbackQuery.data === "no") {
+        await callback.answerCallbackQuery();
+
         post.button = null;
     }
 
-    await ctx.reply("Добавить PDF? (да/нет)");
-    const { message: pdfAnswer } = await conversation.waitFor("message:text");
-    post.pdf = pdfAnswer.text.toLowerCase() === "да";
+    // await ctx.reply("Добавить PDF? (да/нет)");
+    // const { message: pdfAnswer } = await conversation.waitFor("message:text");
+    // post.pdf = pdfAnswer.text.toLowerCase() === "да";
+    //
 
 
-    const caption = `<b>${post.title}</b>\n\n${post.text}`;
-
+    const text = post.text || "";
 
     let keyboard;
     if (post.button) {
         keyboard = new InlineKeyboard().url(post.button.text, post.button.url);
     }
 
+// превью
     if (post.photoFileId) {
         await ctx.replyWithPhoto(post.photoFileId, {
-            caption,
+            caption: text,
             parse_mode: "HTML",
             reply_markup: keyboard,
         });
     } else {
-        await ctx.reply(caption, {
+        await ctx.reply(text, {
             parse_mode: "HTML",
             reply_markup: keyboard,
         });
     }
 
-    await ctx.reply("Опубликовать? (да/нет)");
-    const { message: confirm } = await conversation.waitFor("message:text");
+    await ctx.reply("Опубликовать?", {
+        reply_markup: yesOrNoKeyboard,
+    });
 
-    if (confirm.text.toLowerCase() === "да") {
+    const confirmCallback = await conversation.waitFor("callback_query:data");
+    await confirmCallback.answerCallbackQuery();
+
+    if (confirmCallback.callbackQuery.data === "yes") {
         const chatId = -1003583122815;
 
         if (post.photoFileId) {
             await ctx.api.sendPhoto(chatId, post.photoFileId, {
-                caption,
+                caption: text, // ← ВАЖНО
                 parse_mode: "HTML",
                 reply_markup: keyboard,
             });
         } else {
-            await ctx.api.sendMessage(chatId, caption, {
+            await ctx.api.sendMessage(chatId, text, {
                 parse_mode: "HTML",
                 reply_markup: keyboard,
             });
         }
 
-        await ctx.reply("✅ Пост опубликован",{
-            reply_markup: { remove_keyboard: true }
-        });
-        console.log(path)
-        console.log("LOOOOG")
-        console.log(post.path)
+        await ctx.reply("✅ Пост опубликован");
 
     } else {
-        await ctx.reply("❌ Отменено",{
-            reply_markup: adminKeyboard()
+        await ctx.reply("❌ Отменено", {
+            reply_markup: adminKeyboard(),
         });
     }
 }
-
