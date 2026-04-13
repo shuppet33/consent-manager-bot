@@ -12,6 +12,7 @@ import {registerManagerHandlers} from "./features/manager/manager.handlers"
 import {addManager, deleteManager} from "./features/manager/manager.service"
 import {addPost, addPostConversation} from "./callbacks/add-post";
 import {registerLeadHandlers} from "./features/lead/lead.handlers";
+import {leadFlow} from "./features/lead/lead.service";
 
 dotenv.config();
 
@@ -24,23 +25,27 @@ bot.use(getRole)
 
 bot.use(createConversation(addManager));
 bot.use(createConversation(deleteManager));
-
+bot.use(createConversation(leadFlow))
 bot.use(createConversation(addPostConversation));
 
 
 adminCallbackQuery(bot)
 addPost(bot)
 registerManagerHandlers(bot);
-registerLeadHandlers(bot);
 
 bot.command("start", async (ctx: Context) => {
 
     const param = ctx.match
 
+    console.log('match 2', param)
+
     if (ctx.state.role === "user") {
-        return ctx.reply(`${param} \n Для следующего шага, нужно принять политику конфиденциальности и согласие на обработку персональных данных 👇`, {
-            reply_markup: consentKeyboard
-        })
+        if (!param) return;
+
+        console.log('2')
+        await ctx.conversation.enter("leadFlow", {
+            startParam: param,
+        });
     }
 
     if (ctx.state.role === "manager") {

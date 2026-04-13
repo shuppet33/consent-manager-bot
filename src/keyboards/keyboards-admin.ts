@@ -20,4 +20,3 @@ export function settingsManager() {
         .text("Админ панель","admin-panel")
 }
 
-

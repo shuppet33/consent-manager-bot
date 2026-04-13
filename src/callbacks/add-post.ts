@@ -2,6 +2,7 @@ import { Conversation } from "@grammyjs/conversations";
 import {Context, InlineKeyboard, InputFile, Keyboard} from "grammy";
 import {adminKeyboard, settingsManager} from "../keyboards/keyboards-admin";
 import {customAlphabet} from "nanoid";
+import {db} from "../db/connect";
 
 const nanoid = customAlphabet(
     'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
@@ -19,8 +20,9 @@ const yesOrNoKeyboard = new InlineKeyboard()
 const canselKeyboard = new InlineKeyboard()
     .text("Отмена","cancel")
 
-const speekQuestion = new Keyboard()
-    .text("пропустить")
+const canselKeyboardPostAddPhoto = new InlineKeyboard()
+    .text("Пропустить","skip")
+    .text("Отмена","cancel")
 
 
 function canselPost(ctx: Context) {
@@ -38,17 +40,16 @@ export const addPost = (ctx:Context) => {
 
 async function waitWithCancel(conversation: Conversation, ctx: Context) {
     const res = await conversation.waitFor([
-        "message:text",
+        "message",
         "callback_query:data",
     ]);
 
     if (res.callbackQuery?.data === "cancel") {
         await res.answerCallbackQuery();
         await ctx.reply("❌ Действие отменено", {
-            reply_markup: settingsManager(),
+            reply_markup: adminKeyboard(),
         });
-        await conversation.exit();
-        throw new Error("CANCELLED");
+        await conversation.halt()
     }
 
     return res;
@@ -72,7 +73,10 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
         reply_markup: canselKeyboard,
     });
 
-    const msg = await conversation.waitFor("message");
+    // const msg = await conversation.waitFor("message");
+    //
+    const msg = await waitWithCancel(conversation, ctx);
+
 
     const hasPhoto = !!msg.message?.photo;
     const hasText = !!msg.message?.text;
@@ -90,7 +94,7 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
                 reply_markup: canselKeyboard,
             });
 
-            const textMsg = await conversation.waitFor("message:text");
+            const textMsg = await waitWithCancel(conversation, ctx);
             post.text = textMsg.message.text;
         }
     }
@@ -101,47 +105,26 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
 
         // ❗️ текст без фото → просим фото
         await ctx.reply("Отправьте фото", {
-            reply_markup: canselKeyboard,
+            reply_markup: canselKeyboardPostAddPhoto,
         });
 
-        const photoMsg = await conversation.waitFor("message:photo");
+        // const photoMsg = await conversation.waitFor("message:photo");
+
+        const photoMsg = await waitWithCancel(conversation, ctx);
         post.photoFileId = photoMsg.message.photo.at(-1)?.file_id;
     }
 
-// 👉 если вообще ничего нормального
     else {
         await ctx.reply("Отправьте текст или фото");
-        return; // можно зациклить при желании
+        return;
     }
-
-    // message.photo || message.text
-    //
-    // capition? text = capition  : 'где текст сука'
-
-
-    // отправьте текст + картинку поста
-    //
-    // text: '';
-    // img: '';
-    //
-    // пользователь отправляет картинку
-    //
-    // if (!text) return replay дайте текст
-    //
-    // if (!img) ретурн дайте картинку
-    //
-    // if (img && text) {
-    //     вывод сообщения картинка + текст
-    //     добавить кнопку?
-    // }
-
 
     await ctx.reply("Добавить кнопку?", {
         reply_markup: yesOrNoKeyboard,
     });
 
-    const callback = await conversation.waitFor("callback_query:data");
-
+    // const callback = await conversation.waitFor("callback_query:data");
+    const callback =  await waitWithCancel(conversation, ctx);
     if (callback.callbackQuery.data === "yes") {
         await callback.answerCallbackQuery();
 
@@ -173,7 +156,6 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
         keyboard = new InlineKeyboard().url(post.button.text, post.button.url);
     }
 
-// превью
     if (post.photoFileId) {
         await ctx.replyWithPhoto(post.photoFileId, {
             caption: text,
@@ -209,6 +191,17 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
                 reply_markup: keyboard,
             });
         }
+
+        console.log('post uuu')
+
+        await db.query(
+            `INSERT INTO posts (title, start_param)
+             VALUES ($1, $2)`,
+            [
+                post.title || null,
+                post.path,
+            ]
+        );
 
         await ctx.reply("✅ Пост опубликован");
 

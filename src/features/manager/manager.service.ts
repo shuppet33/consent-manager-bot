@@ -133,7 +133,6 @@ export async function addManager(conversation: Conversation, ctx: Context) {
 export async function deleteManager(conversation: Conversation, ctx: Context) {
     try {
 
-
         await ctx.reply(
             "Введите ID менеджера для удаления",
             {reply_markup: cancelKeyboard}
