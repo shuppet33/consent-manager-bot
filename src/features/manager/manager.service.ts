@@ -1,6 +1,6 @@
 import {Conversation} from "@grammyjs/conversations";
 import {Context} from "../../shared/context.types";
-import {cancelKeyboard, confirmKeyboard} from "../../keyboards/keyboards-manager";
+import {cancelKeyboard, confirmKeyboard, deleteConfirmKeyboard} from "../../keyboards/keyboards-manager";
 import {settingsManager} from "../../keyboards/keyboards-admin";
 import {managerModel} from "./manager.model";
 
@@ -119,6 +119,69 @@ export async function addManager(conversation: Conversation, ctx: Context) {
             `📋 <b>Список менеджеров</b>\n\n${managersList}`,
             {parse_mode: "HTML"}
         );
+
+    } catch (e: any) {
+        if (e.message === "CANCEL") return;
+
+        console.error(e);
+        await ctx.reply("Произошла ошибка", {
+            reply_markup: settingsManager(),
+        });
+    }
+}
+
+export async function deleteManager(conversation: Conversation, ctx: Context) {
+    try {
+
+        await ctx.reply(
+            "Введите ID менеджера для удаления",
+            {reply_markup: cancelKeyboard}
+        );
+
+        const idText = await waitWithCancel(conversation, ctx);
+
+        if (!/^\d+$/.test(idText)) {
+            await ctx.reply("ID должен быть числом", {
+                reply_markup: settingsManager(),
+            });
+            return;
+        }
+
+        const telegramId = Number(idText);
+
+
+        const res = await managerModel.findManagerById(telegramId);
+
+        if (!res.rows.length) {
+            await ctx.reply("Менеджер не найден", {
+                reply_markup: settingsManager(),
+            });
+            return;
+        }
+
+        const manager = res.rows[0];
+
+
+        await ctx.reply(
+            `Удалить пользователя?\n\n👤 ${manager.first_name}\n🆔 ${manager.telegram_id}`,
+            {reply_markup: deleteConfirmKeyboard}
+        );
+
+        const confirm = await waitWithCancel(conversation, ctx);
+
+        if (confirm !== "manager-confirm-delete") {
+            await ctx.reply("❌ ОТМЕНЕНО", {
+                reply_markup: settingsManager(),
+            });
+            return;
+        }
+
+        // 4. удаление
+        await managerModel.deleteManager(telegramId);
+
+        await ctx.reply("✅ Менеджер удалён", {
+            reply_markup: settingsManager(),
+        });
 
     } catch (e: any) {
         if (e.message === "CANCEL") return;

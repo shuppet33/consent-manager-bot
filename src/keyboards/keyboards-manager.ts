@@ -6,3 +6,7 @@ export const confirmKeyboard = new InlineKeyboard()
 
 export const cancelKeyboard = new InlineKeyboard()
     .text("❌ Отмена", "cancel");
+
+export const deleteConfirmKeyboard = new InlineKeyboard()
+    .text("Удалить", "manager-confirm-delete")
+    .text("Отмена", "cancel");
