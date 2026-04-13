@@ -71,49 +71,52 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
     //     reply_markup:canselKeyboard
     // });
 
-    await ctx.reply("Введите текст поста", {
+    await ctx.reply("Отправьте фото и текст (можно вместе)", {
         reply_markup: canselKeyboard,
     });
 
-    post.text = await waitText(conversation, ctx);
+    const msg = await conversation.waitFor("message");
 
+// 📦 что пришло
+    const hasPhoto = !!msg.message?.photo;
+    const hasText = !!msg.message?.text;
+    const hasCaption = !!msg.message?.caption;
 
-    await ctx.reply("Введите текст поста", {
-        reply_markup: canselKeyboard
-    });
+// 👉 если есть фото
+    if (hasPhoto) {
+        post.photoFileId = msg.message.photo.at(-1)?.file_id;
 
-    const res = await waitWithCancel(conversation, ctx);
+        if (hasCaption) {
+            // ✅ фото + подпись → готово
+            post.text = msg.message.caption;
+        } else {
+            // ❗️ фото без текста → просим текст
+            await ctx.reply("Введите текст поста", {
+                reply_markup: canselKeyboard,
+            });
 
-    if (res.message?.text) {
-        post.text = res.message.text;
+            const textMsg = await conversation.waitFor("message:text");
+            post.text = textMsg.message.text;
+        }
     }
 
-    if (res.callbackQuery?.data === "submit") {
-        await ctx.reply("Пост пустой");
-    }
+// 👉 если нет фото, но есть текст
+    else if (hasText) {
+        post.text = msg.message.text;
 
-    const { message: textMsg } = await conversation.waitFor("message:text");
-    post.text = textMsg.text;
-
-
-    if (!textMsg.text) {
-        await ctx.reply("Добавьте текст или отправьте готовый пост",{reply_markup:canselKeyboard})
-    }
-
-
-    await ctx.reply("Отправьте фото или напишите 'пропустить'",
-        {
-            reply_markup:speekQuestion
+        // ❗️ текст без фото → просим фото
+        await ctx.reply("Отправьте фото", {
+            reply_markup: canselKeyboard,
         });
 
-    const photoMsg = await conversation.waitFor("message");
-
-    console.log('photoMsg', photoMsg.update.message);
-
-    if (photoMsg.message?.photo) {
+        const photoMsg = await conversation.waitFor("message:photo");
         post.photoFileId = photoMsg.message.photo.at(-1)?.file_id;
-    } else {
-        post.photoFileId = null;
+    }
+
+// 👉 если вообще ничего нормального
+    else {
+        await ctx.reply("Отправьте текст или фото");
+        return; // можно зациклить при желании
     }
 
     // message.photo || message.text
