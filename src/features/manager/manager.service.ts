@@ -1,40 +1,11 @@
 import {Conversation} from "@grammyjs/conversations";
-import {Bot, InlineKeyboard} from "grammy";
-import {db} from "../db/connect";
-import {settingsManager, adminKeyboard} from "../keyboards/keyboards-admin";
-import {Context} from "../shared/context.types";
-
-
-export function registerManagerHandlers(bot: Bot) {
-    bot.callbackQuery("admin-panel", async (ctx) => {
-        await ctx.answerCallbackQuery();
-
-        await ctx.editMessageText("Админ-панель", {
-            reply_markup: adminKeyboard()
-        });
-    });
-
-}
-
-
-// кнопки
-const confirmKeyboard = new InlineKeyboard()
-    .text("Добавить менеджера", "manager-confirm-add")
-    .text("Отмена добавления", "cancel");
-
-const cancelKeyboard = new InlineKeyboard()
-    .text("❌ Отмена", "cancel");
+import {Context} from "../../shared/context.types";
+import {cancelKeyboard, confirmKeyboard} from "../../keyboards/keyboards-manager";
+import {settingsManager} from "../../keyboards/keyboards-admin";
+import {managerModel} from "./manager.model";
 
 const TELEGRAM_ID_LENGTH = 9;
 
-
-export function qweqweqwe(bot: Bot) {
-    bot.callbackQuery("admin-panel", async (ctx) => {
-        await ctx.reply("qweqweqweqweqweqweqwe")
-    })
-}
-
-// универсальное ожидание
 async function waitWithCancel(conversation: Conversation, ctx: Context) {
 
     const res = await conversation.waitFor([
@@ -55,11 +26,9 @@ async function waitWithCancel(conversation: Conversation, ctx: Context) {
         return res.callbackQuery.data;
     }
 
-    // текст
     return res.message.text;
 }
 
-// ввод ID
 async function askForId(conversation: Conversation, ctx: Context) {
     while (true) {
         await ctx.reply(
@@ -82,7 +51,6 @@ async function askForId(conversation: Conversation, ctx: Context) {
     }
 }
 
-// ввод имени
 async function askForName(conversation: Conversation, ctx: Context) {
     while (true) {
         await ctx.reply("Как зовут менеджера?", {
@@ -124,12 +92,7 @@ export async function addManager(conversation: Conversation, ctx: Context) {
             return;
         }
 
-        const existing = await db.query(
-            `SELECT *
-             FROM users
-             WHERE telegram_id = $1`,
-            [telegramId]
-        );
+        const existing = await managerModel.findByTelegramId(telegramId);
 
         if (existing.rows.length > 0) {
             await ctx.reply("Такой пользователь уже есть", {
@@ -138,22 +101,13 @@ export async function addManager(conversation: Conversation, ctx: Context) {
             return;
         }
 
-        await db.query(
-            `INSERT INTO users (telegram_id, first_name, role)
-             VALUES ($1, $2, $3)`,
-            [telegramId, name, "manager"]
-        );
+        await managerModel.createManager(telegramId, name);
 
-        const res = await db.query(
-            `SELECT telegram_id, first_name
-             FROM users
-             WHERE role = 'manager'`
-        );
+        const res = await managerModel.getAllManagers();
 
         const managersList = res.rows
             .map((user, i) => {
-                return `🔹 ${i + 1}. ${user.first_name}
-   └ id: ${user.telegram_id}`;
+                return `🔹 ${i + 1}. ${user.first_name} --- ID: ${user.telegram_id}`;
             })
             .join("\n\n");
 
@@ -174,5 +128,4 @@ export async function addManager(conversation: Conversation, ctx: Context) {
             reply_markup: settingsManager(),
         });
     }
-
 }
