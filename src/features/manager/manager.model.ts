@@ -24,5 +24,22 @@ export const managerModel = {
              FROM users
              WHERE role = 'manager'`
         );
+    },
+
+    async deleteManager(telegramId: number) {
+        return db.query(
+            `DELETE FROM users
+         WHERE telegram_id = $1 AND role = 'manager'`,
+            [telegramId]
+        );
+    },
+
+    async findManagerById(telegramId: number) {
+        return db.query(
+            `SELECT telegram_id, first_name
+         FROM users
+         WHERE telegram_id = $1 AND role = 'manager'`,
+            [telegramId]
+        );
     }
 };

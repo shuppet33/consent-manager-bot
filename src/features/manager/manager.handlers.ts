@@ -9,4 +9,9 @@ export function registerManagerHandlers(bot: Bot) {
             reply_markup: adminKeyboard()
         });
     });
+
+    bot.callbackQuery("manager-delete", async (ctx) => {
+        await ctx.answerCallbackQuery();
+        await ctx.conversation.enter("deleteManager");
+    });
 }
