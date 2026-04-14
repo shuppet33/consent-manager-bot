@@ -1,4 +1,4 @@
-import { Conversation } from "@grammyjs/conversations";
+import {Conversation} from "@grammyjs/conversations";
 import {Context, InlineKeyboard, InputFile, Keyboard} from "grammy";
 import {adminKeyboard, settingsManager} from "../keyboards/keyboards-admin";
 import {customAlphabet} from "nanoid";
@@ -18,11 +18,11 @@ const yesOrNoKeyboard = new InlineKeyboard()
     .text("Нет", "no");
 
 const canselKeyboard = new InlineKeyboard()
-    .text("Отмена","cancel")
+    .text("Отмена", "cancel")
 
-const canselKeyboardPostAddPhoto = new InlineKeyboard()
-    .text("Пропустить","skip")
-    .text("Отмена","cancel")
+const canselOrSkipKeyboard = new InlineKeyboard()
+    .text("Пропустить", "skip")
+    .text("Отмена", "cancel")
 
 
 function canselPost(ctx: Context) {
@@ -31,8 +31,9 @@ function canselPost(ctx: Context) {
     });
 }
 
-export const addPost = (ctx:Context) => {
-    ctx.callbackQuery("addPost", async (ctx) => {;
+export const addPost = (ctx: Context) => {
+    ctx.callbackQuery("addPost", async (ctx) => {
+        ;
         await ctx.answerCallbackQuery();
         await ctx.conversation.enter("addPostConversation");
     })
@@ -60,14 +61,17 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
     const post: {
         path?: string
         title?: string;
-        text?: string;
+        text?: string | null;
         photoFileId?: string | null;
         button?: { text: string; url: string } | null;
         pdf?: boolean;
     } = {};
 
     const path = nanoid();
+    post.path = path;
 
+    console.log("MY NANOID", path);
+    post.title = "exampleTitle"
 
     await ctx.reply("Отправьте фото и текст (можно вместе)", {
         reply_markup: canselKeyboard,
@@ -91,30 +95,33 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
         } else {
             // ❗️ фото без текста → просим текст
             await ctx.reply("Введите текст поста", {
-                reply_markup: canselKeyboard,
+                reply_markup: canselOrSkipKeyboard,
             });
 
             const textMsg = await waitWithCancel(conversation, ctx);
-            post.text = textMsg.message.text;
-        }
-    }
 
-// 👉 если нет фото, но есть текст
-    else if (hasText) {
+            if (textMsg.callbackQuery?.data === "skip") {
+                post.text = null;
+            } else {
+                post.text = textMsg.message.text;
+            }
+        }
+    } else if (hasText) {
         post.text = msg.message.text;
 
-        // ❗️ текст без фото → просим фото
         await ctx.reply("Отправьте фото", {
-            reply_markup: canselKeyboardPostAddPhoto,
+            reply_markup: canselOrSkipKeyboard,
         });
 
-        // const photoMsg = await conversation.waitFor("message:photo");
+        const photoMsg = await waitWithCancel(conversation, ctx)
 
-        const photoMsg = await waitWithCancel(conversation, ctx);
-        post.photoFileId = photoMsg.message.photo.at(-1)?.file_id;
-    }
+        if (photoMsg.callbackQuery?.data === "skip") {
+            post.photoFileId = null
+        } else {
+            post.photoFileId = photoMsg.message.photo.at(-1)?.file_id;
+        }
 
-    else {
+    } else {
         await ctx.reply("Отправьте текст или фото");
         return;
     }
@@ -124,7 +131,8 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
     });
 
     // const callback = await conversation.waitFor("callback_query:data");
-    const callback =  await waitWithCancel(conversation, ctx);
+    const callback = await waitWithCancel(conversation, ctx);
+
     if (callback.callbackQuery.data === "yes") {
         await callback.answerCallbackQuery();
 
@@ -194,16 +202,32 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
 
         console.log('post uuu')
 
-        await db.query(
-            `INSERT INTO posts (title, start_param)
-             VALUES ($1, $2)`,
+        // await db.query(
+        //     `INSERT INTO posts (title, start_param)
+        //      VALUES ($1, $2)`,
+        //     [
+        //         post.title || null,
+        //         post.path,
+        //     ]
+        // );
+
+        console.log("MY PATH POST", post.path)
+
+        const qwerty = await db.query(
+            `INSERT INTO posts (id, title, start_param)
+             VALUES ($1, $2, $3)`,
             [
+                path,
                 post.title || null,
-                post.path,
+                path,
             ]
         );
 
-        await ctx.reply("✅ Пост опубликован");
+        console.log("QWERTY", qwerty.rows)
+        console.log("INSERT RESULT", qwerty.rowCount);
+        await ctx.reply("✅ Пост опубликован", {
+            reply_markup: adminKeyboard(),
+        });
 
     } else {
         await ctx.reply("❌ Отменено", {
