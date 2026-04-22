@@ -3,10 +3,15 @@ import {Context, InlineKeyboard, InputFile, Keyboard} from "grammy";
 import {adminKeyboard, settingsManager} from "../keyboards/keyboards-admin";
 import {customAlphabet} from "nanoid";
 import {db} from "../db/connect";
+import dotenv from "dotenv";
+dotenv.config();
+
+
+
 
 const nanoid = customAlphabet(
     'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-    16 // длина
+    16
 );
 
 const controlKeyboard = new InlineKeyboard()
@@ -33,7 +38,6 @@ function canselPost(ctx: Context) {
 
 export const addPost = (ctx: Context) => {
     ctx.callbackQuery("addPost", async (ctx) => {
-        ;
         await ctx.answerCallbackQuery();
         await ctx.conversation.enter("addPostConversation");
     })
@@ -60,25 +64,30 @@ async function waitWithCancel(conversation: Conversation, ctx: Context) {
 export async function addPostConversation(conversation: Conversation, ctx: Context) {
     const post: {
         path?: string
+        telegram_id: number
         title?: string;
         text?: string | null;
+        entities?: MessageEntity[]
         photoFileId?: string | null;
         button?: { text: string; url: string } | null;
         pdf?: boolean;
     } = {};
 
+    // const messageId: number;
+    //
+    // post.path =  messageId: number;
+
+
     const path = nanoid();
     post.path = path;
 
-    console.log("MY NANOID", path);
-    post.title = "exampleTitle"
+    post.title = "exampleTitle213123123"
+
 
     await ctx.reply("Отправьте фото и текст (можно вместе)", {
         reply_markup: canselKeyboard,
     });
 
-    // const msg = await conversation.waitFor("message");
-    //
     const msg = await waitWithCancel(conversation, ctx);
 
 
@@ -91,7 +100,8 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
 
         if (hasCaption) {
             // ✅ фото + подпись → готово
-            post.text = msg.message.caption;
+            post.text = msg.message.caption
+            post.entities = msg.message.caption_entities
         } else {
             // ❗️ фото без текста → просим текст
             await ctx.reply("Введите текст поста", {
@@ -102,12 +112,15 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
 
             if (textMsg.callbackQuery?.data === "skip") {
                 post.text = null;
+                post.entities = [];
             } else {
                 post.text = textMsg.message.text;
+                post.entities = textMsg.message.entities;
             }
         }
     } else if (hasText) {
         post.text = msg.message.text;
+        post.entities = msg.message.entities;
 
         await ctx.reply("Отправьте фото", {
             reply_markup: canselOrSkipKeyboard,
@@ -130,7 +143,7 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
         reply_markup: yesOrNoKeyboard,
     });
 
-    // const callback = await conversation.waitFor("callback_query:data");
+
     const callback = await waitWithCancel(conversation, ctx);
 
     if (callback.callbackQuery.data === "yes") {
@@ -140,11 +153,12 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
 
         const {message: btnText} = await conversation.waitFor("message:text");
 
+
+
         post.button = {
             text: btnText.text,
-            url: `t.me/qliwkjelkhewf_bot?start=${path}`,
+            url: `t.me/${process.env.usernameTg}?start=${path}`,
         };
-
     } else if (callback.callbackQuery.data === "no") {
         await callback.answerCallbackQuery();
 
@@ -154,7 +168,6 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
     // await ctx.reply("Добавить PDF? (да/нет)");
     // const { message: pdfAnswer } = await conversation.waitFor("message:text");
     // post.pdf = pdfAnswer.text.toLowerCase() === "да";
-    //
 
 
     const text = post.text || "";
@@ -167,12 +180,12 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
     if (post.photoFileId) {
         await ctx.replyWithPhoto(post.photoFileId, {
             caption: text,
-            parse_mode: "HTML",
+            caption_entities: post.entities,
             reply_markup: keyboard,
         });
     } else {
         await ctx.reply(text, {
-            parse_mode: "HTML",
+            entities: post.entities,
             reply_markup: keyboard,
         });
     }
@@ -181,54 +194,46 @@ export async function addPostConversation(conversation: Conversation, ctx: Conte
         reply_markup: yesOrNoKeyboard,
     });
 
+
     const confirmCallback = await conversation.waitFor("callback_query:data");
     await confirmCallback.answerCallbackQuery();
 
+
     if (confirmCallback.callbackQuery.data === "yes") {
-        const chatId = -1003583122815;
+        const chatId = process.env.channelId;
+
+        let sentMessage;
 
         if (post.photoFileId) {
-            await ctx.api.sendPhoto(chatId, post.photoFileId, {
-                caption: text, // ← ВАЖНО
-                parse_mode: "HTML",
+            sentMessage = await ctx.api.sendPhoto(chatId, post.photoFileId, {
+                caption: text,
+                caption_entities: post.entities,
                 reply_markup: keyboard,
             });
         } else {
-            await ctx.api.sendMessage(chatId, text, {
-                parse_mode: "HTML",
+            sentMessage = await ctx.api.sendMessage(chatId, text, {
+                entities: post.entities,
                 reply_markup: keyboard,
             });
         }
 
-        console.log('post uuu')
+        post.telegram_id = sentMessage.message_id;
+        console.log(post.telegram_id);
 
-        // await db.query(
-        //     `INSERT INTO posts (title, start_param)
-        //      VALUES ($1, $2)`,
-        //     [
-        //         post.title || null,
-        //         post.path,
-        //     ]
-        // );
-
-        console.log("MY PATH POST", post.path)
-
-        const qwerty = await db.query(
-            `INSERT INTO posts (id, title, start_param)
-             VALUES ($1, $2, $3)`,
+        const createPostResult = await db.query(
+            `INSERT INTO posts (id, title, start_param, telegram_id)
+             VALUES ($1, $2, $3, $4)`,
             [
                 path,
                 post.title || null,
                 path,
+                post.telegram_id
             ]
         );
 
-        console.log("QWERTY", qwerty.rows)
-        console.log("INSERT RESULT", qwerty.rowCount);
         await ctx.reply("✅ Пост опубликован", {
             reply_markup: adminKeyboard(),
         });
-
     } else {
         await ctx.reply("❌ Отменено", {
             reply_markup: adminKeyboard(),

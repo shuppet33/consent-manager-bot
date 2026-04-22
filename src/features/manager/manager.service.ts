@@ -4,7 +4,7 @@ import {cancelKeyboard, confirmKeyboard, deleteConfirmKeyboard} from "../../keyb
 import {settingsManager} from "../../keyboards/keyboards-admin";
 import {managerModel} from "./manager.model";
 
-const TELEGRAM_ID_LENGTH = 9;
+const TELEGRAM_ID_LENGTH = 10;
 
 async function waitWithCancel(conversation: Conversation, ctx: Context) {
 

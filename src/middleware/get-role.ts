@@ -8,6 +8,8 @@ export const getRole = async (ctx: Context, next: NextFunction) => {
 
         ctx.state = {role: 'user'};
 
+        // console.log(ctx.state)
+
         if (!telegramId) {
             return next();
         }
@@ -17,6 +19,7 @@ export const getRole = async (ctx: Context, next: NextFunction) => {
             ctx.from?.first_name,
             ctx.from?.username
         );
+        console.log(ctx.state.role);
 
         return next();
     } catch (e) {

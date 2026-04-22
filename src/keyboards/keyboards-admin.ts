@@ -1,5 +1,6 @@
 import {InlineKeyboard, Keyboard} from "grammy";
 
+
 export function adminKeyboard() {
     return new InlineKeyboard()
         .text("Создать пост", "addPost")
@@ -19,4 +20,5 @@ export function settingsManager() {
         .text("Удалить","manager-delete")
         .text("Админ панель","admin-panel")
 }
+
 

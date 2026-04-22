@@ -10,3 +10,7 @@ export const cancelKeyboard = new InlineKeyboard()
 export const deleteConfirmKeyboard = new InlineKeyboard()
     .text("Удалить", "manager-confirm-delete")
     .text("Отмена", "cancel");
+
+export const analyticsKeyboard = new InlineKeyboard()
+    .text("Сегодня", "analytics_today")
+    .text("За конкретный день", "specificDateAnalytics");
